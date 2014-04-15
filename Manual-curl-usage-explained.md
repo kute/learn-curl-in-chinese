@@ -151,7 +151,7 @@ FTPS和FTP差不多，推荐使用`FTP://`和`--ftp-ssl`参数结合的方式
 
 ##VERBOSE / DEBUG
 
-如果`curl`失败了，或者你吃了`server`的闭门羹，或者你不理解`responses`，那就用`-v`标志来获取详细信息。`curl`会输出许多信息，包括它发送和接收的，你可以看到`client`和`server`的交互（*但是不会给你展示实际的数据*）
+如果`curl`失败了，或者你吃了`server`的闭门羹don't let you in，或者你不理解`responses`，那就用`-v`标志来获取详细信息。`curl`会输出许多信息，包括它发送和接收的，你可以看到`client`和`server`的交互（*但是不会给你展示实际的数据*）
 
 	curl -v ftp://ftp.upload.com/
 
@@ -159,3 +159,69 @@ FTPS和FTP差不多，推荐使用`FTP://`和`--ftp-ssl`参数结合的方式
 
 	curl --trace trace.txt www.haxx.se
 
+##关于详细信息
+
+不同的协议提供了针对指定文件或者文档不同的获取详细信息的方式。为了获取单个文件的详细信息，你应该使用`-I`或者`--head`参数，它展示了针对HTTP和FTP上的单个文件的所有可用信息。
+
+例如把HTTP的报头信息（`headers`)存储在一个单独的文件中
+
+	curl --dump-header headers.txt curl.haxx.se
+
+注意，如果你想获取`server`发送的`cookies`信息，那么把报头信息存储在单独的文件中是非常有用的
+
+##POST(HTTP)
+
+使用curl来post data是很容易的，你可以通过`-d`参数来实现(*注意 post的data必须是经过编码的*)
+
+例如post `name`和`phone`参数
+
+	curl -d "name=Rafael%20Sagula&phone=3320780" \ 
+                 http://www.where.com/guest.cgi
+
+那么怎么样体检一个表单（`form`）呢
+
+首先你要找出表单中所有你想提交的`<input>`标签（在curl的官方站点中有个叫做`formfind.pl`的`perl`程序可以帮你完成这个任务）
+
+如果现在有个提交的请求，你可以使用`-d`来提交，它使用如下的方式进行提交
+
+	<variable1>=<data1>&<variable2>=<data2>&...
+
+`variable`名就是`<input>`标签的`name`属性，`data`就是你填写的数据，*数据必须经过`URL encoded`*，也就是说你必须用`+`来替代空格，用`%XX`这样的形式来替代特殊字符
+
+例如在[http://www.formpost.com/getthis/](http://www.formpost.com/getthis/ "http://www.formpost.com/getthis/")页面有如下表单
+
+	<form action="post.cgi" method="post">
+	<input name=user size=10>
+	<input name=pass type=password size=10>
+    <input name=id type=hidden value="blablabla">
+    <input name=ding value="submit">
+    </form>
+
+我们填写`user`为`foobar`，`password`为`12345`，现在开始进行提交
+
+	curl -d "user=foobar&pass=12345&id=blablabla&ding=submit"  (continues)
+          http://www.formpost.com/getthis/post.cgi
+
+`-d`参数使用的`mime-type`是`application/x-www-form-urlencoded`，curl也支持`multipart/form-data`，这种形式例如在文件上传
+
+`-F`接受`-F "name=contents"`形式的参数，如果你的`contents`是从文件中读出的，那么使用`@filename`的形式，当然你可以通过追加`;type=<mime type>'`指明文件的`content type`。你也可以在同一个域中推荐多个文件的内容，例如下面有个名为`coolfiles`的域同时提交三个文件，这三个文件的`content type`是不同的
+
+	curl -F "coolfiles=@fil1.gif;type=image/gif,fil2.txt,fil3.html" \ 
+        http://www.post.com/postit.cgi
+
+如果文件没有指明`content-type`，那么curl会从文件的扩展名来推测或者使用前面已经指明`content-type`的文件的类型，否则curl会使用默认的`application/octet-stream`类型
+
+在一个`post`请求中同时发送两个文件有两种方式：
+
+1. 在一个域中提交两个文件
+
+		curl -F "pictures=@dog.gif,cat.gif"
+
+
+2. 用两个域来提交
+
+		 curl -F "docpicture=@dog.gif" -F "catpicture=@cat.gif"
+
+
+
+*有点困了*
